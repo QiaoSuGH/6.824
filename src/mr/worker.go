@@ -1,10 +1,20 @@
 package mr
 
-import "fmt"
-import "log"
-import "net/rpc"
-import "hash/fnv"
+import (
+	"fmt"
+	"hash/fnv"
+	"log"
+	"net/rpc"
+)
 
+func init() {
+	log.SetFlags(log.Ltime | log.Lshortfile)
+}
+
+var (
+	shouldExit bool
+	reply      = RequestTaskReply{}
+)
 
 //
 // Map functions return a slice of KeyValue.
@@ -24,7 +34,6 @@ func ihash(key string) int {
 	return int(h.Sum32() & 0x7fffffff)
 }
 
-
 //
 // main/mrworker.go calls this function.
 //
@@ -35,6 +44,17 @@ func Worker(mapf func(string, string) []KeyValue,
 
 	// uncomment to send the Example RPC to the coordinator.
 	// CallExample()
+	shouldExit = RequestTask()
+	if shouldExit {
+		return
+	}
+	if reply.TaskType == MapTaskType {
+		//do mapf
+		log.Printf("worker get map task")
+	} else {
+		//do reducef
+		log.Printf("worker get reduce task")
+	}
 
 }
 
@@ -82,4 +102,13 @@ func call(rpcname string, args interface{}, reply interface{}) bool {
 
 	fmt.Println(err)
 	return false
+}
+
+func RequestTask() bool {
+	args := RequestTaskArgs{}
+	c := call("Coordinator.Task", &args, &reply)
+	if !c {
+		return false
+	}
+	return reply.ShouldExit
 }
