@@ -3,8 +3,10 @@ package mr
 import (
 	"fmt"
 	"hash/fnv"
+	"io/ioutil"
 	"log"
 	"net/rpc"
+	"os"
 )
 
 func init() {
@@ -39,23 +41,30 @@ func ihash(key string) int {
 //
 func Worker(mapf func(string, string) []KeyValue,
 	reducef func(string, []string) string) {
+	for {
+		arg := RequestTaskArgs{}
+		if c := call(CTask, &arg, &reply); !c {
+			log.Printf("%s rpc call fails\n", CTask)
+			continue
+		}
+		if reply.TaskType == MapTaskType {
+			filename := reply.TaskArg[0]
+			file, err := os.Open(filename)
+			if err != nil {
+				log.Printf("cannot open %v", filename)
+			}
+			content, err := ioutil.ReadAll(file)
+			if err != nil {
+				log.Printf("cannot read %v", filename)
+			}
+			file.Close()
+			kva := mapf(filename, string(content))
+			//TODO save kva
+		} else {
+			//ReduceTask
 
-	// Your worker implementation here.
-
-	// uncomment to send the Example RPC to the coordinator.
-	// CallExample()
-	shouldExit = RequestTask()
-	if shouldExit {
-		return
+		}
 	}
-	if reply.TaskType == MapTaskType {
-		//do mapf
-		log.Printf("worker get map task")
-	} else {
-		//do reducef
-		log.Printf("worker get reduce task")
-	}
-
 }
 
 //
@@ -102,13 +111,4 @@ func call(rpcname string, args interface{}, reply interface{}) bool {
 
 	fmt.Println(err)
 	return false
-}
-
-func RequestTask() bool {
-	args := RequestTaskArgs{}
-	c := call("Coordinator.Task", &args, &reply)
-	if !c {
-		return false
-	}
-	return reply.ShouldExit
 }

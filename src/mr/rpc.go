@@ -24,6 +24,8 @@ type ExampleReply struct {
 	Y int
 }
 
+var CTask = "Coordinator.Task"
+
 // Add your RPC definitions here.
 
 // Cook up a unique-ish UNIX-domain socket name
@@ -37,8 +39,8 @@ func coordinatorSock() string {
 }
 
 const (
-	MapTaskType = iota
-	ReduceTaskType
+	MapTaskType    = 1
+	ReduceTaskType = 2
 )
 
 type RequestTaskArgs struct {
@@ -47,6 +49,6 @@ type RequestTaskArgs struct {
 
 type RequestTaskReply struct {
 	ShouldExit bool //if all tasks finished, worker shoud exits
-	TaskType   int
+	TaskType   int  //if == 0 -- not allocated
 	TaskArg    []string
 }
